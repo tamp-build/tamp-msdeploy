@@ -124,8 +124,8 @@ public sealed class SyncSettings : MsDeploySettingsBase
     protected override IEnumerable<string> BuildVerbArguments()
     {
         yield return "-verb:sync";
-        yield return $"-source:{Source!.Render()}";
-        yield return $"-dest:{Destination!.Render()}";
+        yield return $"-source:{Source!.Render(Source.Password?.Reveal())}";
+        yield return $"-dest:{Destination!.Render(Destination.Password?.Reveal())}";
         foreach (var rule in SkipRules) yield return $"-skip:{rule.Render()}";
         if (UseChecksum) yield return "-useCheckSum";
     }
@@ -156,7 +156,7 @@ public sealed class DumpSettings : MsDeploySettingsBase
     protected override IEnumerable<string> BuildVerbArguments()
     {
         yield return "-verb:dump";
-        yield return $"-source:{Source!.Render()}";
+        yield return $"-source:{Source!.Render(Source.Password?.Reveal())}";
     }
 
     protected override IEnumerable<Secret> CollectSecrets()

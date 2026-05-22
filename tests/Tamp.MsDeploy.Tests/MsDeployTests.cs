@@ -22,35 +22,35 @@ public sealed class MsDeployTests
     public void ContentPath_Provider_Renders_As_Single_Kv()
     {
         var p = MsDeployProvider.ContentPath("C:\\publish");
-        Assert.Equal("contentPath=C:\\publish", p.Render());
+        Assert.Equal("contentPath=C:\\publish", p.Render(null));
     }
 
     [Fact]
     public void IisApp_Provider_Renders_Kind()
     {
         var p = MsDeployProvider.IisApp("MySite");
-        Assert.Equal("iisApp=MySite", p.Render());
+        Assert.Equal("iisApp=MySite", p.Render(null));
     }
 
     [Fact]
     public void Package_And_ArchiveDir_Providers_Render()
     {
-        Assert.Equal("package=artifacts/app.zip", MsDeployProvider.Package("artifacts/app.zip").Render());
-        Assert.Equal("archiveDir=artifacts/archive", MsDeployProvider.ArchiveDir("artifacts/archive").Render());
+        Assert.Equal("package=artifacts/app.zip", MsDeployProvider.Package("artifacts/app.zip").Render(null));
+        Assert.Equal("archiveDir=artifacts/archive", MsDeployProvider.ArchiveDir("artifacts/archive").Render(null));
     }
 
     [Fact]
     public void Custom_Provider_Renders_Verbatim()
     {
         var p = MsDeployProvider.Custom("dbDacFx", "C:\\db.dacpac");
-        Assert.Equal("dbDacFx=C:\\db.dacpac", p.Render());
+        Assert.Equal("dbDacFx=C:\\db.dacpac", p.Render(null));
     }
 
     [Fact]
     public void Provider_WithComputerName_Appends_Comma_Field()
     {
         var p = MsDeployProvider.IisApp("MySite").WithComputerName("https://web1.example.com:8172/msdeploy.axd?site=MySite");
-        Assert.Equal("iisApp=MySite,computerName=https://web1.example.com:8172/msdeploy.axd?site=MySite", p.Render());
+        Assert.Equal("iisApp=MySite,computerName=https://web1.example.com:8172/msdeploy.axd?site=MySite", p.Render(null));
     }
 
     [Fact]
@@ -63,7 +63,22 @@ public sealed class MsDeployTests
 
         Assert.Equal(
             "iisApp=MySite,computerName=https://web1.example.com:8172/msdeploy.axd?site=MySite,userName=deploy-bot,password=p@ssw0rd!,authType=Basic",
-            p.Render());
+            p.Render(pw.Reveal()));
+    }
+
+    [Fact]
+    public void Provider_Render_With_Null_Reveal_Omits_Password_Field()
+    {
+        // Plan-emission shape: when the runner is rendering for logs / dry-run, it should
+        // pass null for the revealed password and get a token with the password=... segment
+        // omitted (the secret stays on CommandPlan.Secrets where redaction is centralized).
+        var pw = FakePw();
+        var p = MsDeployProvider.IisApp("MySite").WithCredentials("u", pw);
+
+        var rendered = p.Render(null);
+        Assert.DoesNotContain("password=", rendered);
+        Assert.Contains("userName=u", rendered);
+        Assert.Contains("authType=Basic", rendered);
     }
 
     [Theory]
@@ -72,14 +87,14 @@ public sealed class MsDeployTests
     public void Provider_AuthType_Token(MsDeployAuthType auth, string expected)
     {
         var p = MsDeployProvider.IisApp("MySite").WithCredentials("u", FakePw(), auth);
-        Assert.Contains($"authType={expected}", p.Render());
+        Assert.Contains($"authType={expected}", p.Render(null));
     }
 
     [Fact]
     public void Provider_Default_AuthType_Omits_Token()
     {
         var p = MsDeployProvider.IisApp("MySite") with { UserName = "u", Password = FakePw() };
-        Assert.DoesNotContain("authType=", p.Render());
+        Assert.DoesNotContain("authType=", p.Render(null));
     }
 
     [Fact]
@@ -89,7 +104,7 @@ public sealed class MsDeployTests
             .WithExtraSetting("includeAcls=false")
             .WithExtraSetting("encryptPassword=true");
 
-        Assert.Equal("contentPath=C:\\publish,includeAcls=false,encryptPassword=true", p.Render());
+        Assert.Equal("contentPath=C:\\publish,includeAcls=false,encryptPassword=true", p.Render(null));
     }
 
     // ---- Sync verb ----
@@ -415,7 +430,7 @@ public sealed class MsDeployTests
     public void Provider_Path_Roundtrips_Verbatim(string path)
     {
         var p = MsDeployProvider.ContentPath(path);
-        Assert.Equal($"contentPath={path}", p.Render());
+        Assert.Equal($"contentPath={path}", p.Render(null));
     }
 
     [Fact]

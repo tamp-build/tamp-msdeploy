@@ -80,13 +80,18 @@ public sealed record MsDeployProvider
     public MsDeployProvider WithExtraSetting(string keyEqualsValue) =>
         this with { ExtraSettings = new List<string>(ExtraSettings) { keyEqualsValue } };
 
-    /// <summary>Render the provider as a single msdeploy <c>-source:</c> / <c>-dest:</c> token (without the leading flag).</summary>
-    internal string Render()
+    /// <summary>
+    /// Render the provider as a single msdeploy <c>-source:</c> / <c>-dest:</c> token (without the leading flag).
+    /// The caller passes the already-revealed password — this keeps <see cref="Secret.Reveal"/>
+    /// inside an approved context (Tamp.Analyzers TAMP004). Pass <c>null</c> to render without
+    /// the <c>password=</c> component (suitable for dry-run / plan emission).
+    /// </summary>
+    internal string Render(string? revealedPassword)
     {
         var parts = new List<string> { $"{Kind}={Value}" };
         if (!string.IsNullOrEmpty(ComputerName)) parts.Add($"computerName={ComputerName}");
         if (!string.IsNullOrEmpty(UserName)) parts.Add($"userName={UserName}");
-        if (Password is not null) parts.Add($"password={Password.Reveal()}");
+        if (!string.IsNullOrEmpty(revealedPassword)) parts.Add($"password={revealedPassword}");
         if (AuthType != MsDeployAuthType.Default)
             parts.Add($"authType={AuthType switch
             {
